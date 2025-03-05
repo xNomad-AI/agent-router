@@ -6,8 +6,8 @@ import dspy
 from dotenv import load_dotenv
 import json
 
-from planner import Planner
-from action import ACTION_LIST
+from agents.planner import Planner
+from agents.action import ACTION_LIST
 
 # Load environment variables
 load_dotenv()
