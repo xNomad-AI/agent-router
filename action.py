@@ -150,13 +150,44 @@ class SEND_TOKEN(ToolBase):
     )
 
 
-class REPLY_CHAT(ToolBase):
+class CREATE_TOKEN(ToolBase):
+    """Create a new token on pumpfun and buy a specified amount using SOL. Requires the token name, symbol and image url, buy amount after create in SOL."""
+
+    name: str = Field(..., description="Name of the token to create")
+    symbol: str = Field(..., description="Symbol of the token to create")
+    imageUrl: Optional[str] = Field(
+        None, description="Image URL or attachment file of the token to create"
+    )
+    description: Optional[str] = Field(
+        None, description="Description of the token to create"
+    )
+    twitter: Optional[str] = Field(
+        None, description="Twitter URL of the token to create"
+    )
+    website: Optional[str] = Field(
+        None, description="Website URL of the token to create"
+    )
+    telegram: Optional[str] = Field(
+        None, description="Telegram URL of the token to create"
+    )
+    buyAmountSol: Optional[float] = Field(
+        None, description="Amount of SOL to buy after token creation"
+    )
+
+
+class WRAP_UP(ToolBase):
+    """Wrap up the process for previous steps when the user's request is completed or it is unable to be completed"""
+
+    message: str = Field(..., description="The message to wrap up the process")
+
+
+class GENERAL_CHAT(ToolBase):
     """Reply to the user's message. This action is triggered when the user's message is not related to the crypto market."""
 
     message: str = Field(..., description="The message to reply to the user")
 
 
-TOOLS = [
+ACTION_LIST = [
     convert_to_schema(tool)
     for tool in [
         CLAIM_AIRDROP,
@@ -165,6 +196,8 @@ TOOLS = [
         SWAP_TOKEN,
         WALLET_PORTFOLIO,
         SEND_TOKEN,
-        REPLY_CHAT,
+        CREATE_TOKEN,
+        GENERAL_CHAT,
+        WRAP_UP,
     ]
 ]

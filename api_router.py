@@ -1,14 +1,13 @@
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Any
+from typing import List, Any
 import dspy
 from dotenv import load_dotenv
-from ast import literal_eval
 import json
 
-from planner import ActionExecutor, ACTION_LIST, InstructionPlanner
-from action import TOOLS
+from planner import Planner
+from action import ACTION_LIST
 
 # Load environment variables
 load_dotenv()
@@ -32,75 +31,51 @@ class ChatMessage(BaseModel):
     content: str
 
 
-class ActionRequest(BaseModel):
+class Step(BaseModel):
+    step: str
+    action: str
+    result: str
+
+
+class PlanRequest(BaseModel):
     chat_history: List[ChatMessage]
-    plan: list[str]
-    current_step: str
+    user_request: str
+    past_steps: list[Step]
 
 
-class ActionResponse(BaseModel):
+class PlanResponse(BaseModel):
+    step: str
     action: str
     parameters: dict[str, Any]
 
 
-class InstructionRequest(BaseModel):
-    chat_history: List[ChatMessage]
-
-
-class InstructionResponse(BaseModel):
-    instruction_list: list[str]
-
-
-@app.post("/execute-action", response_model=ActionResponse)
-async def execute_action(request: ActionRequest):
+@app.post("/plan", response_model=PlanResponse)
+async def plan(request: PlanRequest):
     try:
-        # Format chat history as a string
-        user_prompt = request.chat_history[-1].content
+        user_request = request.user_request
+        chat_history = request.chat_history
+        past_steps = request.past_steps
 
         chat_history_str = ""
-        for msg in request.chat_history[:-1]:
+        for msg in chat_history[:-1]:
             chat_history_str += f"{msg.role}: {msg.content}\n"
 
-        # Use the ActionPlanner to predict the action
-        plan_action = dspy.Predict(ActionExecutor)
+        plan_action = dspy.Predict(Planner)
         response = plan_action(
-            user_prompt=user_prompt,
+            available_action=ACTION_LIST,
             chat_history=chat_history_str,
-            plan=request.plan,
-            current_step=request.current_step,
-            action_list=TOOLS,
+            user_request=user_request,
+            past_steps=past_steps,
         )
 
-        return ActionResponse(
-            action=response.action, parameters=json.loads(response.parameters)
+        return PlanResponse(
+            step=response.next_step,
+            action=response.action,
+            parameters=response.parameters,
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error planning action: {str(e)}")
-
-
-@app.post("/plan-instruction", response_model=InstructionResponse)
-async def plan_instruction(request: InstructionRequest):
-    try:
-        # Format chat history as a string
-        user_prompt = request.chat_history[-1].content
-
-        chat_history_str = ""
-        for msg in request.chat_history[:-1]:
-            chat_history_str += f"{msg.role}: {msg.content}\n"
-
-        # Use the ActionPlanner to predict the action
-        plan_instruction = dspy.Predict(InstructionPlanner, tools=[])
-        response = plan_instruction(
-            user_prompt=user_prompt,
-            chat_history=chat_history_str,
-            action_list=ACTION_LIST,
-        )
-
-        return InstructionResponse(instruction_list=response.instruction_list)
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error planning action: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
