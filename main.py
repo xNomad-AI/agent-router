@@ -32,7 +32,6 @@ class ChatMessage(BaseModel):
 
 
 class Step(BaseModel):
-    step: str
     action: str
     result: str
 
@@ -44,7 +43,6 @@ class PlanRequest(BaseModel):
 
 
 class PlanResponse(BaseModel):
-    step: str
     action: str
     parameters: dict[str, Any]
 
@@ -69,7 +67,6 @@ async def plan(request: PlanRequest):
         )
 
         return PlanResponse(
-            step=response.next_step,
             action=response.action,
             parameters=response.parameters,
         )

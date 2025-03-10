@@ -38,7 +38,7 @@ class ANALYZE_TOKEN(ToolBase):
         None,
         description="The token contract address to analyze, should be a 44 character string, at least one of tokenSymbol or tokenAddress should be provided",
     )
-    analyze: Optional[List[str]] = Field(
+    analyze: List[str] = Field(
         None,
         description="The types of analysis to perform, should be an array, items can be 'info', 'news', 'twitter', default to ['info', 'twitter', 'news']",
     )
@@ -176,9 +176,17 @@ class CREATE_TOKEN(ToolBase):
 
 
 class WRAP_UP(ToolBase):
-    """Wrap up the process for previous steps when the user's request is completed or it is unable to be completed"""
+    """
+    Wrap up the process for previous steps when the user's request is completely executed or it is unable to be completed.
+    Also use this action when the user's request is general chat.
+    # Guideline
+    1. Generate a message to the user utilizing the information fromprevious steps.
+    """
 
-    message: str = Field(..., description="The message to wrap up the process")
+    message: str = Field(
+        ...,
+        description="The message to wrap up the process or to reply to the user's message",
+    )
 
 
 class GENERAL_CHAT(ToolBase):
@@ -197,7 +205,6 @@ ACTION_LIST = [
         WALLET_PORTFOLIO,
         SEND_TOKEN,
         CREATE_TOKEN,
-        GENERAL_CHAT,
         WRAP_UP,
     ]
 ]

@@ -2,3 +2,6 @@ test/
 archived/
 *__pycache__/
 .vscode
+*.log
+.env
+*.code-workspace
