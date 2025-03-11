@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, validator, field_validator
+from typing import List, Optional, Dict, Any, Literal, Union
 
 
 class ToolBase(BaseModel):
@@ -45,7 +45,7 @@ class ANALYZE_TOKEN(ToolBase):
 
 
 class AUTO_TASK(ToolBase):
-    """Perform auto token swap. Enables the agent to automatically execute trades when specified conditions are met, such as limit orders, scheduled transactions, or other custom triggers, optimizing trading strategies without manual intervention."""
+    """Perform auto token swap. Enables the agent to automatically execute trades when specified conditions are met, such as limit orders, scheduled transactions, or other custom triggers, optimizing trading strategies without manual intervention. Set default token symbol to SOL when user want to buy (input) or sell (output) tokens"""
 
     inputTokenSymbol: Optional[str] = Field(
         None,
@@ -89,7 +89,7 @@ class AUTO_TASK(ToolBase):
 
 
 class SWAP_TOKEN(ToolBase):
-    """Swap tokens on Solana blockchain, set default token symbol to SOL when user want to buy or sell tokens"""
+    """Swap tokens on Solana blockchain, set default token symbol to SOL when user want to buy (input) or sell (output) tokens"""
 
     inputTokenSymbol: Optional[str] = Field(
         None,
@@ -122,18 +122,17 @@ class SWAP_TOKEN(ToolBase):
 
 class WALLET_PORTFOLIO(ToolBase):
     """Get the wallet total balance or specific token balance in agent wallet"""
-
-    queryType: Optional[str] = Field(
-        None,
-        description='The type of query, should be "walletBalance" or "tokenBalance", default is walletBalance',
+    queryType: Literal["walletBalance", "tokenBalance"] = Field(
+        ..., 
+        description="Query type: 'walletBalance' for total balance, 'tokenBalance' for specific token"
     )
     tokenSymbol: Optional[str] = Field(
         None,
-        description='The token symbol to query, at lease one of tokenSymbol or tokenAddress should be provided when queryType is "tokenBalance"',
+        description="The token symbol to query (required when type is tokenBalance)"
     )
     tokenAddress: Optional[str] = Field(
         None,
-        description='The token contract address to query, at lease one of tokenSymbol or tokenAddress should be provided when queryType is "tokenBalance"',
+        description="The token contract address to query (required when type is tokenBalance)"
     )
 
 

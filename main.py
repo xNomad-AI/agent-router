@@ -33,42 +33,45 @@ class ChatMessage(BaseModel):
 
 class Step(BaseModel):
     action: str
-    result: str
+    detail: str
+    result: str    
 
 
 class PlanRequest(BaseModel):
     chat_history: List[ChatMessage]
-    user_request: str
+    task_definition: str
     past_steps: list[Step]
 
 
 class PlanResponse(BaseModel):
     action: str
     parameters: dict[str, Any]
+    explanation: str
 
 
 @app.post("/plan", response_model=PlanResponse)
 async def plan(request: PlanRequest):
     try:
-        user_request = request.user_request
+        task_definition = request.task_definition
         chat_history = request.chat_history
         past_steps = request.past_steps
 
         chat_history_str = ""
-        for msg in chat_history[:-1]:
+        for msg in chat_history:
             chat_history_str += f"{msg.role}: {msg.content}\n"
 
         plan_action = dspy.Predict(Planner)
         response = plan_action(
             available_action=ACTION_LIST,
             chat_history=chat_history_str,
-            user_request=user_request,
+            task_definition=task_definition,
             past_steps=past_steps,
         )
 
         return PlanResponse(
             action=response.action,
             parameters=response.parameters,
+            explanation=response.explanation,
         )
 
     except Exception as e:
