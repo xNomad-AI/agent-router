@@ -179,7 +179,7 @@ class WRAP_UP(ToolBase):
     Wrap up the process for previous steps when the user's request is completely executed or it is unable to be completed.
     Also use this action when the user's request is general chat.
     # Guideline
-    1. Generate a message to the user utilizing the information fromprevious steps.
+    1. Generate a message to the user utilizing the information from previous steps.
     """
 
     message: str = Field(
@@ -207,3 +207,6 @@ ACTION_LIST = [
         WRAP_UP,
     ]
 ]
+
+if __name__ == "__main__":
+    print(ACTION_LIST)
