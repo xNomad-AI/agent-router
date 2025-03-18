@@ -25,11 +25,20 @@ lm = dspy.LM(model=model, api_key=os.getenv("OPENAI_API_KEY"))
 
 dspy.configure(lm=lm)
 
+class Media(BaseModel):
+    id: str
+    url: str
+    title: str
+    source: str
+    description: str
+    text: str
+    contentType: str | None = None
 
 # Define request and response models
 class ChatMessage(BaseModel):
     role: str  # 'user' or 'assistant'
     content: str
+    attachments: list[Media] | None = None  # attachments, explicitly optional with default None
 
 
 class Step(BaseModel):
@@ -84,11 +93,14 @@ SWITCH_TASK_ACTION = {"name": "SWITCH_TASK",
 @app.post("/plan", response_model=PlanResponse)
 async def plan(request: PlanRequest):
     try:
+        # logger.info(f"request: {request}")
         task_definition = request.task_definition
         chat_history = request.chat_history[:-1]
         last_message = request.chat_history[-1]
         if last_message.role == "user":
             new_message = last_message.content
+            if last_message.attachments:
+                new_message += f" (Attachment: {last_message.attachments[0].url})"
         else:
             new_message = ""
         past_steps = request.past_steps
@@ -96,7 +108,10 @@ async def plan(request: PlanRequest):
 
         chat_history_str = ""
         for msg in chat_history:
-            chat_history_str += f"{msg.role}: {msg.content}\n"
+            chat_history_str += f"{msg.role}: {msg.content}"
+            if msg.attachments:
+                chat_history_str += f" (Attachment: {msg.attachments[0].url})"
+            chat_history_str += "\n"
             
         actions = [action for action in request.actions if action is not None] + [WRAP_UP_ACTION, GENERAL_CHAT_ACTION]
         if switched_task == False:
@@ -123,6 +138,7 @@ async def plan(request: PlanRequest):
         )
 
     except Exception as e:
+        logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -35,10 +35,10 @@ class Planner(dspy.Signature):
     3. Do not repeat the same action in the past steps unless pending.
     4. If the task requires only general response, call the action "GENERAL_CHAT".
     """
+    available_action = dspy.InputField(description="List of actions you can take")
     chat_history = dspy.InputField(description="Chat history")
     new_message = dspy.InputField(description="Latest message from the user")
     task_definition = dspy.InputField(description="Task definition")
-    available_action = dspy.InputField(description="List of actions you can take")
     past_steps = dspy.InputField(description="Past actions taken and their results:")
     is_same_task = dspy.OutputField(description="Reasoning if the current task definition matches the user's latest message")
     summary_of_past_steps = dspy.OutputField(description="Summary of the past steps and whether you should wrap up the process")
