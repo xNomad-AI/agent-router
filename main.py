@@ -6,12 +6,23 @@ import dspy
 from dotenv import load_dotenv
 import json
 from loguru import logger
+import sys
+from datetime import datetime
+import pathlib
 
 from agents.planner import Planner, PlannerWithSwitchTask
 from agents.action import ACTION_LIST
 
 # Load environment variables
 load_dotenv()
+
+# Configure logger
+log_dir = "log"
+pathlib.Path(log_dir).mkdir(exist_ok=True)
+log_file = f"{log_dir}/{datetime.now().strftime('%Y-%m-%d')}.log"
+logger.remove()  # Remove default logger
+logger.add(sys.stderr, level="INFO")  # Add stderr logger
+logger.add(log_file, rotation="00:00", level="INFO")  # Add file logger with daily rotation
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -93,7 +104,7 @@ SWITCH_TASK_ACTION = {"name": "SWITCH_TASK",
 @app.post("/plan", response_model=PlanResponse)
 async def plan(request: PlanRequest):
     try:
-        # logger.info(f"request: {request}")
+        logger.info(f"request: {json.dumps(request.dict(), default=str)}")
         task_definition = request.task_definition
         chat_history = request.chat_history[:-1]
         last_message = request.chat_history[-1]
@@ -114,6 +125,14 @@ async def plan(request: PlanRequest):
             chat_history_str += "\n"
             
         actions = [action for action in request.actions if action is not None] + [WRAP_UP_ACTION, GENERAL_CHAT_ACTION]
+        
+        # for CREATE_TOKEN, change the action name to LAUNCH_TOKEN
+        for action in actions:
+            if action["name"] == "CREATE_TOKEN":
+                action["name"] = "LAUNCH_TOKEN"
+            if action["name"] == "SEND_TOKEN":
+                action["name"] = "TRANSFER_TOKEN"
+
         if switched_task == False:
             actions.append(SWITCH_TASK_ACTION)
             plan_action = dspy.Predict(PlannerWithSwitchTask)
@@ -128,6 +147,11 @@ async def plan(request: PlanRequest):
             past_steps=past_steps,
         )
 
+        # for LAUNCH_TOKEN, change the action name to CREATE_TOKEN
+        if response.action == "LAUNCH_TOKEN":
+            response.action = "CREATE_TOKEN"
+        if response.action == "TRANSFER_TOKEN":
+            response.action = "SEND_TOKEN"
         logger.info(f"is_same_task: {response.is_same_task}")
         logger.info(f"summary_of_past_steps: {response.summary_of_past_steps}")
         logger.info(f"action: {response.action}\n parameters: {response.parameters}\n explanation: {response.explanation}")

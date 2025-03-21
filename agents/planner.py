@@ -4,6 +4,8 @@ from typing import Any
 
 class PlannerWithSwitchTask(dspy.Signature):
     """
+    You are a crypto expert agent, you can help user to analyze crypto tokens and manage their crypto assets.
+    Your main objective is to figure out the best action to take based on the user's latest message and the past steps taken.
     If the task definition does not match the user's latest message, generate a new task using "SWITCH_TASK". Otherwise, break the task into smaller steps and plan the next action to take based on the task definition and past steps taken.
     # Guideline:
     1. If the task is completely finished or unable to proceed based on the past steps, wrap up the process and call the action "WRAP_UP".
@@ -28,12 +30,15 @@ class PlannerWithSwitchTask(dspy.Signature):
     
 class Planner(dspy.Signature):
     """
+    You are a crypto expert agent, you can help user to analyze crypto tokens and manage their crypto assets.
+    Your main objective is to figure out the best action to take based on the user's latest message and the past steps taken.
     Break the task into smaller steps and plan the next action to take based on the task definition and past steps taken.
     # Guideline:
     1. If the task is completely finished or unable to proceed based on the past steps, wrap up the process and call the action "WRAP_UP".
     2. If the last action is pending user's input, and user responded, retry the last action.
     3. Do not repeat the same action in the past steps unless pending.
-    4. If the task requires only general response, call the action "GENERAL_CHAT".
+    4. For "AUTO_TASK", when it is successfully created, the action is considered as completed, and no execution is needed.
+    5. If the task requires only general response, call the action "GENERAL_CHAT".
     """
     available_action = dspy.InputField(description="List of actions you can take")
     chat_history = dspy.InputField(description="Chat history")
