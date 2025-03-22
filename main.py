@@ -130,8 +130,6 @@ async def plan(request: PlanRequest):
         for action in actions:
             if action["name"] == "CREATE_TOKEN":
                 action["name"] = "LAUNCH_TOKEN"
-            if action["name"] == "SEND_TOKEN":
-                action["name"] = "TRANSFER_TOKEN"
 
         if switched_task == False:
             actions.append(SWITCH_TASK_ACTION)
@@ -150,8 +148,6 @@ async def plan(request: PlanRequest):
         # for LAUNCH_TOKEN, change the action name to CREATE_TOKEN
         if response.action == "LAUNCH_TOKEN":
             response.action = "CREATE_TOKEN"
-        if response.action == "TRANSFER_TOKEN":
-            response.action = "SEND_TOKEN"
         logger.info(f"is_same_task: {response.is_same_task}")
         logger.info(f"summary_of_past_steps: {response.summary_of_past_steps}")
         logger.info(f"action: {response.action}\n parameters: {response.parameters}\n explanation: {response.explanation}")
@@ -168,5 +164,13 @@ async def plan(request: PlanRequest):
 
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
+    import argparse
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    args = parser.parse_args()
+    
+    if args.debug:
+        uvicorn.run(app, host="0.0.0.0", port=8081, log_level="info")
+    else:
+        uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
