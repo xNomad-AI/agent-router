@@ -149,12 +149,16 @@ async def plan(request: PlanRequest):
         if response.action == "LAUNCH_TOKEN":
             response.action = "CREATE_TOKEN"
         logger.info(f"is_same_task: {response.is_same_task}")
+        
+        
         logger.info(f"summary_of_past_steps: {response.summary_of_past_steps}")
-        logger.info(f"action: {response.action}\n parameters: {response.parameters}\n explanation: {response.explanation}")
+        if switched_task == False:
+            logger.info(f"should_repeat_last_step: {response.should_repeat_last_step}")
+        logger.info(f"action: {response.action}\n parameters: {response.parameters}\n action_description: {response.action_description}")
         return PlanResponse(
             action=response.action.strip('"'),
             parameters=response.parameters,
-            explanation=response.explanation.strip('"'),
+            explanation=response.action_description.strip('"'),
         )
 
     except Exception as e:
