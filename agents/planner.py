@@ -27,8 +27,8 @@ class PlannerWithSwitchTask(dspy.Signature):
     available_action = dspy.InputField(description="List of actions you can take")
     past_steps = dspy.InputField(description="Past actions taken and their results:")
     is_same_task = dspy.OutputField(description="Reasoning if the current task definition matches the user's latest message")
-    summary_of_past_steps = dspy.OutputField(description="Repeat the task definition and summarize the past steps and whether you should wrap up the process.")
     should_repeat_last_step = dspy.OutputField(description="If last step is not pending, output: 'Last step is not pending, no need to repeat'; If last step is pending and user confirmed, output: 'User confirmed the pending step, repeat the last step'; if last step is pending and user rejected, output: 'User rejected the pending step, skip the last step'")
+    summary_of_past_steps = dspy.OutputField(description="Repeat the task definition and summarize the past steps and whether you should wrap up the process. Output 'You should wrap Up' if you should wrap up the process, otherwise output 'You should continue the process'")
     action = dspy.OutputField(description="Action to take")
     parameters: dict[str, Any] = dspy.OutputField(
         description="Parameters for the action"
