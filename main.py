@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 import pathlib
 
-from agents.planner import PlannerForFirstStep, PlannerWithSwitchTask, PlannerForLoop
+from agents.planner import PlannerForFirstStep, PlannerWithSwitchTask, PlannerForLoop, SOL_BACKGROUND_PROMPT, EVM_BACKGROUND_PROMPT
 from agents.action import ACTION_LIST
 
 # Load environment variables
@@ -19,10 +19,10 @@ load_dotenv()
 # Configure logger
 log_dir = "log"
 pathlib.Path(log_dir).mkdir(exist_ok=True)
-log_file = f"{log_dir}/{datetime.now().strftime('%Y-%m-%d')}.log"
+log_file = f"{log_dir}/{datetime.now().strftime('%Y-%m-%d_%H')}.log"
 logger.remove()  # Remove default logger
 logger.add(sys.stderr, level="INFO")  # Add stderr logger
-logger.add(log_file, rotation="00:00", level="INFO")  # Add file logger with daily rotation
+logger.add(log_file, rotation="1 hour", level="INFO")  # Change rotation to hourly
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -31,7 +31,7 @@ app = FastAPI(
 )
 
 # Initialize language model
-model = "openai/gpt-4o-mini"
+model = "openai/gpt-4o"
 lm = dspy.LM(model=model, api_key=os.getenv("OPENAI_API_KEY"))
 
 dspy.configure(lm=lm)
@@ -64,6 +64,7 @@ class PlanRequest(BaseModel):
     actions: list[dict | None]
     past_steps: list[Step]
     switched_task: bool
+    chain: str = "solana"
 
 
 class PlanResponse(BaseModel):
@@ -111,8 +112,30 @@ def convert_scientific_to_decimal(obj):
         return format(obj, 'f').rstrip('0').rstrip('.')
     return obj
 
+def modify_dspy_signature(chain):
+    dspy_signature_list = [PlannerForFirstStep, PlannerWithSwitchTask, PlannerForLoop]
+    
+    if chain == "solana":
+        BACKGROUND_PROMPT = SOL_BACKGROUND_PROMPT
+    elif chain == "evm":
+        BACKGROUND_PROMPT = EVM_BACKGROUND_PROMPT
+    else:
+        BACKGROUND_PROMPT = SOL_BACKGROUND_PROMPT        
+        logger.warning(f"Invalid chain: {chain}, using Solana background prompt")
+
+    for dspy_signature in dspy_signature_list:
+        # Store original doc if not already stored
+        if not hasattr(dspy_signature, '_original_doc'):
+            dspy_signature._original_doc = dspy_signature.__doc__ or ""
+        
+        # Reset doc to original + background prompt
+        dspy_signature.__doc__ = f"{BACKGROUND_PROMPT}{dspy_signature._original_doc}"
+
+    return dspy_signature_list
+
 @app.post("/plan", response_model=PlanResponse)
 async def plan(request: PlanRequest):
+    CUSTOM_PLANNER_FOR_FIRST_STEP, CUSTOM_PLANNER_WITH_SWITCH_TASK, CUSTOM_PLANNER_FOR_LOOP = modify_dspy_signature(request.chain)
     try:
         logger.info(f"request: {json.dumps(request.dict(), default=str)}")
         task_definition = request.task_definition
@@ -145,7 +168,7 @@ async def plan(request: PlanRequest):
         if switched_task == False:
             if new_message:
                 actions.append(SWITCH_TASK_ACTION)
-                plan_action = dspy.Predict(PlannerWithSwitchTask)
+                plan_action = dspy.Predict(CUSTOM_PLANNER_WITH_SWITCH_TASK)
                 response = plan_action(
                     chat_history=chat_history_str,
                     new_message=new_message,
@@ -156,7 +179,7 @@ async def plan(request: PlanRequest):
                     
                 )
             else:
-                plan_action = dspy.Predict(PlannerForLoop)
+                plan_action = dspy.Predict(CUSTOM_PLANNER_FOR_LOOP)
                 response = plan_action(
                     chat_history=chat_history_str,
                     task_definition=task_definition,
@@ -164,7 +187,7 @@ async def plan(request: PlanRequest):
                     available_action=actions,  
                 )
         else:
-            plan_action = dspy.Predict(PlannerForFirstStep)
+            plan_action = dspy.Predict(CUSTOM_PLANNER_FOR_FIRST_STEP)
             response = plan_action(     
                 chat_history=chat_history_str,
                 new_message=new_message,

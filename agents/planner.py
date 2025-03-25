@@ -1,16 +1,25 @@
 import dspy
 from typing import Any
 
+SOL_BACKGROUND_PROMPT = """
+You are a crypto expert agent, you can help user to analyze crypto tokens and manage their crypto assets.
+
+# Terms
+1. Buy / sell {tokenSymbol} ({tokenAddress}): Swapping tokens using "EXECUTE_SWAP", default to buying with SOL or selling for SOL
+2. Automatic Task: Limit order which is triggered by price or time using "AUTO_TASK"
+"""
+
+EVM_BACKGROUND_PROMPT = """
+You are a crypto expert agent, you can help user to analyze crypto tokens and manage their crypto assets.
+
+# Terms
+1. Buy / sell {tokenSymbol} ({tokenAddress}): Swapping tokens using "EXECUTE_SWAP", default to buying with BNB or selling for BNB
+2. Automatic Task: Limit order which is triggered by price or time using "AUTO_TASK"
+"""
+
 # Standard Intention Recognition
 class PlannerWithSwitchTask(dspy.Signature):
     """
-    You are a crypto expert agent, you can help user to analyze crypto tokens and manage their crypto assets.
-    
-    # Terms
-    1. Buy / sell {tokenSymbol} ({tokenAddress}): Swapping tokens using "EXECUTE_SWAP", default to buying with SOL or selling for SOL
-    2. Automatic Task: Limit order which is triggered by price or time using "AUTO_TASK"
-    
-    
     # Objective
     1. Figure out the best action to take based on the user's latest message and the past steps taken.
     2. If the task definition does not match the user's latest message, generate a new task using "SWITCH_TASK". Otherwise, break the task into smaller steps and plan the next action to take based on the task definition and past steps taken.
@@ -39,13 +48,6 @@ class PlannerWithSwitchTask(dspy.Signature):
 
 class PlannerForLoop(dspy.Signature):
     """
-    You are a crypto expert agent, you can help user to analyze crypto tokens and manage their crypto assets.
-    
-    # Terms
-    1. Buy / sell {tokenSymbol} ({tokenAddress}): Swapping tokens using "EXECUTE_SWAP", default to buying with SOL or selling for SOL
-    2. Automatic Task: Limit order which is triggered by price or time using "AUTO_TASK"
-    
-    
     # Objective
     1. Figure out the best action to take based on the past steps taken.
     2. Break the task into smaller steps and plan the next action to take based on the task definition and past steps taken.
@@ -71,12 +73,6 @@ class PlannerForLoop(dspy.Signature):
 # Simplify because the task has been switched, so this step is guaranteed to be the first step
 class PlannerForFirstStep(dspy.Signature):
     """
-    You are a crypto expert agent, you can help user to analyze crypto tokens and manage their crypto assets.
-    
-    # Terms
-    1. Buy / sell {tokenSymbol} ({tokenAddress}): Swapping tokens using "EXECUTE_SWAP", default to buying with SOL or selling for SOL
-    2. Automatic Task: Limit order which is triggered by price or time using "AUTO_TASK"
-    
     # Objective
     1. Figure out the best action to take based on the user's latest message and the past steps taken.
     2. Break the task into smaller steps and plan the next action to take based on the task definition and past steps taken.
