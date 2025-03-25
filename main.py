@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 import pathlib
 
-from agents.planner import Planner, PlannerWithSwitchTask
+from agents.planner import PlannerForFirstStep, PlannerWithSwitchTask, PlannerForLoop
 from agents.action import ACTION_LIST
 
 # Load environment variables
@@ -101,6 +101,16 @@ SWITCH_TASK_ACTION = {"name": "SWITCH_TASK",
                 "type": "object",
                 "properties": {"newTaskDefinition": {"type": "string", "description": "new task definition"}}}}
 
+def convert_scientific_to_decimal(obj):
+    if isinstance(obj, dict):
+        return {key: convert_scientific_to_decimal(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_scientific_to_decimal(item) for item in obj]
+    elif isinstance(obj, float):
+        # Convert scientific notation to decimal format
+        return format(obj, 'f').rstrip('0').rstrip('.')
+    return obj
+
 @app.post("/plan", response_model=PlanResponse)
 async def plan(request: PlanRequest):
     try:
@@ -115,6 +125,7 @@ async def plan(request: PlanRequest):
         else:
             new_message = ""
         past_steps = request.past_steps
+        last_step = request.past_steps[-1] if request.past_steps else None
         switched_task = request.switched_task
 
         chat_history_str = ""
@@ -132,31 +143,55 @@ async def plan(request: PlanRequest):
                 action["name"] = "LAUNCH_TOKEN"
 
         if switched_task == False:
-            actions.append(SWITCH_TASK_ACTION)
-            plan_action = dspy.Predict(PlannerWithSwitchTask)
+            if new_message:
+                actions.append(SWITCH_TASK_ACTION)
+                plan_action = dspy.Predict(PlannerWithSwitchTask)
+                response = plan_action(
+                    chat_history=chat_history_str,
+                    new_message=new_message,
+                    past_steps=past_steps,
+                    last_step=last_step,
+                    task_definition=task_definition,
+                    available_action=actions,
+                    
+                )
+            else:
+                plan_action = dspy.Predict(PlannerForLoop)
+                response = plan_action(
+                    chat_history=chat_history_str,
+                    task_definition=task_definition,
+                    past_steps=past_steps,
+                    available_action=actions,  
+                )
         else:
-            plan_action = dspy.Predict(Planner)
-            
-        response = plan_action(
-            available_action=actions,
-            chat_history=chat_history_str,
-            task_definition=task_definition,
-            new_message=new_message,
-            past_steps=past_steps,
-        )
-
+            plan_action = dspy.Predict(PlannerForFirstStep)
+            response = plan_action(     
+                chat_history=chat_history_str,
+                new_message=new_message,
+                task_definition=task_definition,
+                available_action=actions,
+            )
+        
+        
+        
         # for LAUNCH_TOKEN, change the action name to CREATE_TOKEN
         if response.action == "LAUNCH_TOKEN":
             response.action = "CREATE_TOKEN"
-        logger.info(f"is_same_task: {response.is_same_task}")
         
-        if switched_task == False:
+        # Complex situation where we have to determine if the task is the same as the user's latest message, and if the last step is pending
+        if switched_task == False and new_message:
+            logger.info(f"is_same_task: {response.is_same_task}")
             logger.info(f"should_repeat_last_step: {response.should_repeat_last_step}")
-        logger.info(f"summary_of_past_steps: {response.summary_of_past_steps}")
+            logger.info(f"summary_of_past_steps: {response.summary_of_past_steps}")
+        
         logger.info(f"action: {response.action}\n parameters: {response.parameters}\n action_description: {response.action_description}")
+        
+        # Convert parameters from scientific notation to decimal
+        formatted_parameters = convert_scientific_to_decimal(response.parameters)
+        
         return PlanResponse(
             action=response.action.strip('"'),
-            parameters=response.parameters,
+            parameters=formatted_parameters,
             explanation=response.action_description.strip('"'),
         )
 
