@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 import pathlib
 
-from agents.planner import PlannerForFirstStep, PlannerWithSwitchTask, PlannerForLoop, SOL_BACKGROUND_PROMPT, EVM_BACKGROUND_PROMPT
+from agents.planner import PlannerForFirstStep, PlannerWithSwitchTask, PlannerForLoop, SOL_BACKGROUND_PROMPT, BSC_BACKGROUND_PROMPT
 from agents.action import ACTION_LIST
 
 # Load environment variables
@@ -19,10 +19,10 @@ load_dotenv()
 # Configure logger
 log_dir = "log"
 pathlib.Path(log_dir).mkdir(exist_ok=True)
-log_file = f"{log_dir}/{datetime.now().strftime('%Y-%m-%d_%H')}.log"
+log_file = f"{log_dir}/{{time:YYYY-MM-DD_HH}}.log"  # Use loguru's time formatting
 logger.remove()  # Remove default logger
 logger.add(sys.stderr, level="INFO")  # Add stderr logger
-logger.add(log_file, rotation="1 hour", level="INFO")  # Change rotation to hourly
+logger.add(log_file, rotation="1h", level="INFO")  # Use "1h" for hourly rotation
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -117,8 +117,8 @@ def modify_dspy_signature(chain):
     
     if chain == "solana":
         BACKGROUND_PROMPT = SOL_BACKGROUND_PROMPT
-    elif chain == "evm":
-        BACKGROUND_PROMPT = EVM_BACKGROUND_PROMPT
+    elif chain == "bsc":
+        BACKGROUND_PROMPT = BSC_BACKGROUND_PROMPT
     else:
         BACKGROUND_PROMPT = SOL_BACKGROUND_PROMPT        
         logger.warning(f"Invalid chain: {chain}, using Solana background prompt")
